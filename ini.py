@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras as k
+from tensorflow.keras.models import load_model
 import numpy as np
 from pymongo import MongoClient
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ N = 150000
 BATCH_SIZE = 10
 
 db = MongoClient(connect=False)
+load_model('convolutional_nn_v1.h5')
 
 # https://towardsdatascience.com/how-to-quickly-build-a-tensorflow-training-pipeline-15e9ae4d78a0
 # https://stackoverflow.com/questions/48769142/tensorflow-how-to-use-dataset-from-generator-in-estimator
@@ -22,27 +24,19 @@ class mongo_sequence(k.utils.Sequence):
         self.batch_size = batch_size
         self.n = 150000
         self.epoch_size = epoch_size
-        cursor = db.earthquake.train.aggregate([{
-            '$sample': {'size': epoch_size*batch_size}}])
-        self._ids = {i: el['_id'] for i, el in enumerate(cursor)}
 
     def __len__(self):
         return self.epoch_size
 
-    def on_epoch_end(self):
-        db = MongoClient()
-        cursor = db.earthquake.train.aggregate([{
-            '$sample': {'size': self.epoch_size*self.batch_size}}])
-        self._ids = {i: el['_id'] for i, el in enumerate(cursor)}
-        db.close()
-
     def __getitem__(self, idx):
         db = MongoClient()
+        cursor = db.earthquake.train.aggregate([{
+            '$sample': {'size': self.batch_size}}])
         features_batch = []
         label_batch = []
         scaler = StandardScaler(copy=False)
-        for i in range(idx*self.batch_size, (idx + 1)*self.batch_size):
-            _id = self._ids[i]
+        for el in cursor:
+            _id = el['_id']
             docs = db.earthquake.train.find(
                 {'_id': {'$lte': _id}}, {'_id': 0}).sort(
                     [('_id', -1)]).limit(self.n)
@@ -58,20 +52,22 @@ class mongo_sequence(k.utils.Sequence):
 
 
 generator = mongo_sequence(batch_size=10, epoch_size=128)
-model = k.Sequential(
-    [k.layers.InputLayer(input_shape=(150000, 1)),
-     k.layers.Conv1D(12, 500, 1, activation='relu'),
-     k.layers.Conv1D(20, 100, 1000, activation='relu'),
-     k.layers.Flatten(),
-     k.layers.Dense(100, activation='relu'),
-     k.layers.BatchNormalization(),
-     k.layers.Dense(32, activation='relu'),
-     k.layers.BatchNormalization(),
-     k.layers.Dense(1, activation='linear')])
+if not model:
+    model = k.Sequential(
+        [k.layers.InputLayer(input_shape=(150000, 1)),
+         k.layers.Conv1D(12, 500, 1, activation='relu'),
+         k.layers.Conv1D(20, 100, 1000, activation='relu'),
+         k.layers.Flatten(),
+         k.layers.Dense(100, activation='relu'),
+         k.layers.BatchNormalization(),
+         k.layers.Dense(32, activation='relu'),
+         k.layers.BatchNormalization(),
+         k.layers.Dense(1, activation='linear')])
+    model.compile(optimizer='adam', loss='mae')
 
-model.compile(optimizer='adam', loss='mae')
-model.fit_generator(generator, steps_per_epoch=128, epochs=2,
+model.fit_generator(generator, steps_per_epoch=128, epochs=10,
                     shuffle=False, use_multiprocessing=False)
+model.save('convolutional_nn_v1.h5')
 
 feat, lab = generator.__getitem__(0)
 extraction = k.Model(inputs=model.input, outputs=model.layers[0].output)
@@ -81,5 +77,5 @@ rows = hidden_one.shape[1]
 x = range(rows)
 x2 = range(150000)
 plt.plot(x2, feat[0, :, 0], color='r')
-plt.plot(x, hidden_one[0, :, 2])
+plt.plot(x, hidden_one[0, :, 1])
 plt.show()

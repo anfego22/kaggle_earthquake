@@ -11,7 +11,6 @@ PATH = '/home/anfego/Documents/Kaggle/Earthquake/Data/Test/'
 BATCH_SIZE = 10
 EPOCH = 32
 N = 150000
-MODEL_NAME = 'initial_model'
 FEATURES = 1
 
 
@@ -70,22 +69,31 @@ ds = tf.data.Dataset.from_generator(get_data,
                                                     FEATURES),
                                                    (BATCH_SIZE, 1)))
 
-
 # Model
-model = k.Sequential([k.layers.InputLayer(input_shape=(N, 1)),
-                      k.layers.Conv1D(10, kernel_size= 100, strides=1,
-                                      activation='relu'),
-                      k.layers.Conv1D(10, kernel_size=100, strides=100,
-                                      activation='relu'),
-                      k.layers.Conv1D(100, kernel_size=100, strides=100),
+model = k.Sequential([k.layers.InputLayer(input_shape=(N, FEATURES)),
+                      k.layers.Conv1D(
+                          8, kernel_size=1000, strides=1,
+                          activation='relu', padding='same',
+                          kernel_regularizer=k.regularizers.l2(0.01)),
+                      k.layers.Conv1D(
+                          10, kernel_size=1024, strides=100,
+                          activation='relu', padding='same',
+                          kernel_regularizer=k.regularizers.l2(0.01)),
+                      k.layers.Conv1D(
+                          100, kernel_size=100, strides=100,
+                          padding='same',
+                          kernel_regularizer=k.regularizers.l2(0.01)),
                       k.layers.Flatten(),
                       k.layers.Dense(10, activation='relu'),
                       k.layers.Dense(1, activation='linear')])
 model.compile(optimizer='adam', loss='mae')
 model.summary()
-for i in range(10):
-    ids = get_sample_point(BATCH_SIZE*EPOCH)
-    model.fit(ds, epochs=1, steps_per_epoch=EPOCH)
+for i in range(30):
+    try:
+        ids = get_sample_point(BATCH_SIZE*EPOCH)
+        model.fit(ds, epochs=1, steps_per_epoch=EPOCH)
+    except:
+        continue
 
 
 submission = []
@@ -103,4 +111,4 @@ for f in os.listdir(PATH):
     submission.append(res)
 
 submission_pd = pd.DataFrame(submission)
-submission_pd.to_csv('Submission/third_submission.csv', index=False)
+submission_pd.to_csv('Submission/four_submission.csv', index=False)

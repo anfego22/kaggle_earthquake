@@ -1,8 +1,8 @@
-#import tensorflow as tf
-#import tensorflow.keras as k
+import pickle
 import pymongo
 import pandas as pd
 import functions as fn
+from sklearn.preprocessing import StandardScaler
 
 N = 150000
 
@@ -30,3 +30,13 @@ for _ in range(len(ids)):
 
 db.augmented_train.insert_many(augmented_data, ordered=False)
 conection.close()
+
+
+cursor = db.augmented_train.find({}, {'_id': 0})
+aug_data = pd.DataFrame([el for el in cursor])
+features = aug_data[['mean', 'sd', 'max', 'min']].values
+scaler = StandardScaler()
+scaler.fit(features)
+
+with open('augmented_scaler', 'wb') as f:
+    pickle.dump(scaler, f)

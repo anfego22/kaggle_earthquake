@@ -63,23 +63,27 @@ ds = tf.data.Dataset.from_generator(get_data,
                                     output_shapes=((BATCH_SIZE, N, FEATURES),
                                                    (BATCH_SIZE, AGG_FEAT),
                                                    (BATCH_SIZE, 1)))
-raw_data = k.layers.Input(shape=(N, FEATURES))
-h = k.layers.Conv1D(16, kernel_size=500, strides=1,
-                    activation='relu', padding='same',
-                    kernel_regularizer=k.regularizers.l2(0.01))(raw_data)
-h = k.layers.Conv1D(5, kernel_size=512, strides=1024,
-                    activation='relu', padding='same',
-                    kernel_regularizer=k.regularizers.l2(0.01))(h)
-h = k.layers.Conv1D(100, kernel_size=100, strides=10,
-                    activation='relu', padding='same',
-                    kernel_regularizer=k.regularizers.l2(0.01))(h)
-h = k.layers.Flatten()(h)
-h = k.layers.Dense(10, activation='relu')(h)
-new_features = k.layers.Input(shape=(AGG_FEAT))
-h = k.layers.concatenate([h, new_features])
-predictions = k.layers.Dense(1, activation='linear')(h)
-model = k.Model([raw_data, new_features], predictions)
-model.compile(optimizer='adam', loss='mae')
+
+model = k.models.load_model('cnn_two_inputs.h5')
+
+if not model:
+    raw_data = k.layers.Input(shape=(N, FEATURES))
+    h = k.layers.Conv1D(16, kernel_size=500, strides=1,
+                        activation='relu', padding='same',
+                        kernel_regularizer=k.regularizers.l2(0.01))(raw_data)
+    h = k.layers.Conv1D(5, kernel_size=512, strides=1024,
+                        activation='relu', padding='same',
+                        kernel_regularizer=k.regularizers.l2(0.01))(h)
+    h = k.layers.Conv1D(100, kernel_size=100, strides=10,
+                        activation='relu', padding='same',
+                        kernel_regularizer=k.regularizers.l2(0.01))(h)
+    h = k.layers.Flatten()(h)
+    h = k.layers.Dense(10, activation='relu')(h)
+    new_features = k.layers.Input(shape=(AGG_FEAT))
+    h = k.layers.concatenate([h, new_features])
+    predictions = k.layers.Dense(1, activation='linear')(h)
+    model = k.Model([raw_data, new_features], predictions)
+    model.compile(optimizer='adam', loss='mae')
 model.summary()
 
 for i in range(1):
@@ -94,10 +98,10 @@ for i in range(1):
             j += 1
             mae = (BATCH_SIZE*(j-1)*mae + BATCH_SIZE*new_mae)/(j*BATCH_SIZE)
             print('MAE {}'.format(mae))
-            
     except:
         continue
 
+model.save('cnn_two_inputs.h5')
 
 submission = []
 scaler = StandardScaler()
@@ -116,4 +120,4 @@ for f in os.listdir(PATH):
     submission.append(res)
 
 submission_pd = pd.DataFrame(submission)
-submission_pd.to_csv('Submission/six_submission.csv', index=False)
+submission_pd.to_csv('Submission/seven_submission.csv', index=False)

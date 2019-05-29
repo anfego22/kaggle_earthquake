@@ -12,7 +12,7 @@ PATH = '/home/anfego/Documents/Kaggle/Earthquake/Data/Test/'
 
 conection = pymongo.MongoClient()
 db = conection.earthquake
-cursor = db.augmented_train.find({}, {'_id': 0})
+cursor = db.augmented_train.find({}, {'_id': 0, 'created_from': 0})
 augmented_data = [el for el in cursor]
 augmented_data = pd.DataFrame(augmented_data)
 X = augmented_data[['max', 'mean', 'min', 'sd']].values
@@ -38,7 +38,7 @@ submission = []
 for f in os.listdir(PATH):
     res = {}
     data = pd.read_csv(PATH + f, sep=',')
-    x = [fn.data_reduction(data.values)]
+    x = fn.data_reduction(data.values, array=True)
     x = pd.DataFrame(x).values
     x = scaler.transform(x)
     res['seg_id'] = f[:-4]
@@ -46,4 +46,4 @@ for f in os.listdir(PATH):
     submission.append(res)
 
 submission_pd = pd.DataFrame(submission)
-submission_pd.to_csv('Submission/fifth_submission.csv', index=False)
+submission_pd.to_csv('Submission/eight_submission.csv', index=False)

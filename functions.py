@@ -13,16 +13,16 @@ def get_sample_point(n):
     return ids
 
 
-def data_reduction_array(x, y=None):
-    if y:
+def data_reduction_array(x, y=[]):
+    if len(y) != 0:
         return [x.mean(), x.std(), x.max(), x.min(),
                 y[-1]]
     else:
         return [x.mean(), x.std(), x.max(), x.min()]
 
 
-def data_reduction_dict(x, y=None):
-    if y:
+def data_reduction_dict(x, y=[]):
+    if len(y) != 0:
         return {'mean': x.mean(), 'sd': x.std(),
                 'max': x.max(), 'min': x.min(),
                 'time_to_failure': y[-1]}
@@ -31,7 +31,7 @@ def data_reduction_dict(x, y=None):
                 'max': x.max(), 'min': x.min()}
 
 
-def data_reduction(x, y=None, array=False):
+def data_reduction(x, y=[], array=False):
     if array:
         return data_reduction_array(x, y)
     else:
